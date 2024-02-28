@@ -1,26 +1,28 @@
-const { Users } = require("../models/models")
+const { AdministratorModel } = require("../models/models")
 const ApiError = require('../error/apiError');
 const bcrypt = require('bcrypt')
-const UserDto = require("../dtos/userDto");
+const AdministratorDto = require("../dtos/administratorDto");
 const tokenService = require("../service/tokenService");
+const passwordService = require("../service/passwordService");
 
 class AuthController {
     async singin(req, res, next) {
       try {
         const {email, password} = req.body;
-        const condidate = await Users.findOne({where: {email}});
+        const condidate = await AdministratorModel.findOne({where: {email}});
 
         if (condidate) {
           return next(ApiError.BadRequest(`Пользователь с почтовым адресом ${email} уже существует`))
         }
 
-        const hashPassword = await bcrypt.hash(password, Number(process.env.SALT_ROUNDS));
-        const user = await Users.create({email, password: hashPassword});
+        const hashPassword = await passwordService.generateHashPassword(password);
+        const user = await AdministratorModel.create({email, password: hashPassword});
 
-        const userDto = new UserDto(user.dataValues);
+        const administratorDto = new AdministratorDto(user.dataValues);
 
-        const tokens = tokenService.generateJWT({...userDto});
-        await tokenService.saveToken(userDto.id, tokens.refreshToken);
+        const tokens = tokenService.generateJWT({...administratorDto});
+
+        await tokenService.saveToken(administratorDto.id, tokens.refreshToken);
 
         res.cookie('refreshToken', tokens.refreshToken, {maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true})
 
@@ -34,7 +36,7 @@ class AuthController {
       try {
         const {email, password} = req.body;
 
-        const user = await Users.findOne({where: {email}})
+        const user = await AdministratorModel.findOne({where: {email}})
 
         if (!user) {
             return next(ApiError.BadRequest('Пользователь с таким email не найден'));
@@ -44,10 +46,10 @@ class AuthController {
         if (!isPassEquals) {
             return next(ApiError.BadRequest('Неверный пароль'));
         }
-        const userDto = new UserDto(user.dataValues);
-        const tokens = tokenService.generateJWT({...userDto});
+        const administratorDto = new AdministratorDto(user.dataValues);
+        const tokens = tokenService.generateJWT({...administratorDto});
 
-        await tokenService.saveToken(userDto.id, tokens.refreshToken);
+        await tokenService.saveToken(administratorDto.id, tokens.refreshToken);
         res.cookie('refreshToken', tokens.refreshToken, {maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true})
 
         return res.json({...tokens});
@@ -83,14 +85,14 @@ class AuthController {
             throw ApiError.UnauthorizedError();
         }
 
-        const user = await Users.findByPk(userData.id);
-        const userDto = new UserDto(user);
-        const tokens = tokenService.generateJWT({...userDto});
+        const user = await AdministratorModel.findByPk(userData.id);
+        const administratorDto = new AdministratorDto(user);
+        const tokens = tokenService.generateJWT({...administratorDto});
 
-        await tokenService.saveToken(userDto.id, tokens.refreshToken);
+        await tokenService.saveToken(administratorDto.id, tokens.refreshToken);
 
         res.cookie('refreshToken', tokens.refreshToken, {maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true})
-        return res.json({...tokens, user: userDto});     
+        return res.json({...tokens, user: administratorDto});     
       } catch (error) {
         next(error)
       }

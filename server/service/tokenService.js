@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { JWT_Token } = require('../models/models');
+const { TokenModel } = require('../models/models');
 
 class TokenService {
   generateJWT(payload) {
@@ -28,29 +28,11 @@ class TokenService {
     return tokenData;
   }
 
-  validateRefreshToken(token) {
-    try {
-        const userData = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
-        return userData;
-    } catch (error) {
-        return null;
-    }
-  }
-
-  validateAccessToken(token) {
-    try {
-        const userData = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
-        return userData;
-    } catch (error) {
-        return null;
-    }
-  }
-
   async findToken(refreshToken) {
-    const tokenData = await JWT_Token.findOne({where: {refreshToken}})
+    const tokenData = await TokenModel.findOne({where: {refreshToken}})
     return tokenData;
   }
-
+  
 }
 
 module.exports = new TokenService();
